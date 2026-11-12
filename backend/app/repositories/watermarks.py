@@ -21,6 +21,18 @@ def list_watermarks(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+def get_watermark(conn: sqlite3.Connection, job_id: int) -> dict[str, Any] | None:
+    r = conn.execute(
+        """
+        SELECT w.job_id, j.name AS job_name, w.watermark_ts, w.artifact_rows, w.updated_at
+        FROM watermarks w JOIN jobs j ON j.id=w.job_id
+        WHERE w.job_id=?
+        """,
+        (job_id,),
+    ).fetchone()
+    return dict(r) if r else None
+
+
 def set_watermark(
     conn: sqlite3.Connection, job_id: int, watermark_ts: str, artifact_rows: int
 ) -> None:

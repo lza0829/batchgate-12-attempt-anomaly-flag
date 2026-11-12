@@ -21,7 +21,7 @@ onMounted(async () => {
 <template>
   <div class="page">
     <h1>编排台</h1>
-    <p class="muted">触发一次全图编排：按依赖层执行；上游未成功则下游记 skipped_dep。</p>
+    <p class="muted">触发一次全图编排：按依赖层执行；上游未成功记 skipped_dep，上游异常且策略为 block 则记 skipped_anomaly。</p>
     <div class="panel">
       <button :disabled="busy" @click="runOnce">{{ busy ? '编排中…' : '执行编排' }}</button>
     </div>
@@ -29,11 +29,18 @@ onMounted(async () => {
     <div class="panel" v-if="last">
       <h3>最近一次报告</h3>
       <p>
-        #{{ last.id }} · <span class="tag ok">{{ last.status }}</span> ·
-        succeeded {{ last.report?.succeeded }} /
+        #{{ last.id }} ·
+        <span class="tag" :class="last.status==='ok'?'ok':'warn'">{{ last.status }}</span> ·
+        succeeded {{ last.report?.succeeded }}（正常 {{ last.report?.normal_success }}） /
         failed {{ last.report?.failed }} /
-        skipped {{ last.report?.skipped }} /
+        skipped {{ last.report?.skipped }}（因异常 {{ last.report?.skipped_anomaly }}） /
         attempts {{ last.report?.attempt_count }}
+      </p>
+      <p>
+        <span class="tag danger">异常 {{ last.report?.anomaly_count }}</span>
+        <span class="muted" style="margin-left:0.5rem">
+          alert {{ last.report?.anomaly_alert }} · block {{ last.report?.anomaly_block }}
+        </span>
       </p>
       <p class="mono muted">watermarked_jobs={{ last.report?.watermarked_jobs }} layers={{ last.report?.layer_count }}</p>
       <p>
@@ -45,7 +52,7 @@ onMounted(async () => {
     <div class="panel">
       <h3>历史编排</h3>
       <table>
-        <thead><tr><th>ID</th><th>状态</th><th>成功</th><th>失败</th><th>跳过</th><th>开始</th></tr></thead>
+        <thead><tr><th>ID</th><th>状态</th><th>成功</th><th>失败</th><th>跳过</th><th>异常</th><th>开始</th></tr></thead>
         <tbody>
           <tr v-for="o in history" :key="o.id">
             <td>{{ o.id }}</td>
@@ -53,6 +60,7 @@ onMounted(async () => {
             <td>{{ o.report?.succeeded }}</td>
             <td>{{ o.report?.failed }}</td>
             <td>{{ o.report?.skipped }}</td>
+            <td>{{ o.report?.anomaly_count ?? 0 }}</td>
             <td class="mono">{{ o.started_at }}</td>
           </tr>
         </tbody>
